@@ -170,23 +170,6 @@
     .feedback-thanks { display:none; text-align:center; padding:1rem; color:var(--success); font-style:italic; font-size:16px; }
 
     .site-footer { text-align:center; padding:2rem 0 0; font-size:12px; color:var(--muted); opacity:0.7; font-style:italic; }
-
-    /* Donation */
-    .donate-panel { background:var(--parchment); border:1px solid rgba(139,105,20,0.28); border-radius:16px; padding:1.5rem 1.75rem; margin-top:1.25rem; box-shadow:0 2px 12px rgba(44,36,22,0.07); text-align:center; }
-    .donate-title { font-family:'Cinzel',serif; font-size:12px; font-weight:600; color:var(--stone); letter-spacing:0.12em; text-transform:uppercase; margin-bottom:6px; }
-    .donate-sub { font-size:14px; color:var(--muted); font-style:italic; margin-bottom:1.25rem; line-height:1.55; }
-    .donate-amounts { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-bottom:1.25rem; }
-    .donate-chip { background:var(--gold-faint); border:1px solid rgba(201,168,76,0.35); border-radius:24px; padding:7px 18px; font-family:'Cinzel',serif; font-size:12px; color:var(--stone); cursor:pointer; transition:all 0.15s; }
-    .donate-chip:hover, .donate-chip.selected { background:var(--stone); color:var(--gold-light); border-color:var(--stone); }
-    .donate-address-box { background:rgba(255,255,255,0.6); border:1px solid rgba(139,105,20,0.25); border-radius:10px; padding:10px 14px; display:flex; align-items:center; gap:10px; margin-bottom:10px; }
-    .donate-address-text { font-family:monospace; font-size:11px; color:var(--stone); flex:1; word-break:break-all; text-align:left; line-height:1.5; }
-    .donate-copy-btn { background:var(--stone); color:var(--gold-light); border:none; border-radius:7px; padding:7px 14px; font-family:'Cinzel',serif; font-size:10px; font-weight:600; letter-spacing:0.08em; cursor:pointer; white-space:nowrap; transition:background 0.15s; flex-shrink:0; }
-    .donate-copy-btn:hover { background:var(--stone-mid); }
-    .donate-network { font-size:11px; color:var(--muted); font-style:italic; margin-top:4px; }
-    .donate-qr-btn { background:transparent; border:1px solid rgba(139,105,20,0.3); border-radius:8px; padding:8px 18px; font-family:'Cinzel',serif; font-size:10.5px; color:var(--muted); cursor:pointer; margin-top:8px; transition:all 0.15s; letter-spacing:0.08em; }
-    .donate-qr-btn:hover { background:var(--gold-faint); color:var(--stone); }
-    .qr-wrap { display:none; margin-top:14px; }
-    .qr-wrap canvas { border-radius:10px; border:2px solid var(--gold); }
     ::-webkit-scrollbar { width:6px; }
     ::-webkit-scrollbar-track { background:var(--parchment-dark); }
     ::-webkit-scrollbar-thumb { background:var(--gold-dark); border-radius:3px; }
@@ -285,7 +268,7 @@
       </button>
     </div>
 
-
+    <div class="feedback-panel">
       <div class="feedback-title">✦ Rate Your Discovery Experience</div>
       <div class="star-row">
         <button class="star-btn" onclick="rateStar(1)">★</button>
@@ -298,39 +281,13 @@
       <button class="submit-btn" id="submitBtn" onclick="submitFeedback()">Submit Review</button>
       <div class="feedback-thanks" id="feedbackThanks">Thank you! Your review will inspire the next explorer. 🌟</div>
     </div>
-
-    <!-- USDC Donation -->
-    <div class="donate-panel">
-      <div class="donate-title">⌘ Support Historical Explorer</div>
-      <p class="donate-sub">Enjoyed your discovery? Support this project with USDC.<br>Every contribution keeps the ancient archives alive. 🏛</p>
-      <div class="donate-amounts">
-        <div class="donate-chip selected" onclick="selectAmount(this)">$1</div>
-        <div class="donate-chip" onclick="selectAmount(this)">$3</div>
-        <div class="donate-chip" onclick="selectAmount(this)">$5</div>
-        <div class="donate-chip" onclick="selectAmount(this)">$10</div>
-      </div>
-      <div class="donate-address-box">
-        <div class="donate-address-text" id="walletAddr">0x71B78a8d2585C63F7D088e372A021E1166Bd4A58</div>
-        <button class="donate-copy-btn" onclick="copyWallet()">Copy</button>
-      </div>
-      <div class="donate-network">⬡ Accepts USDC on Ethereum · Base · Polygon</div>
-      <div><button class="donate-qr-btn" id="qrToggleBtn" onclick="toggleQR()">Show QR Code</button></div>
-      <div class="qr-wrap" id="qrWrap">
-        <canvas id="qrCanvas"></canvas>
-        <div style="font-size:12px;color:var(--muted);margin-top:8px;font-style:italic;">Scan to copy wallet address</div>
-      </div>
-    </div>
-
   </section>
 
   <footer class="site-footer">Historical Explorer &mdash; Powered by Claude AI &bull; &copy; 2026</footer>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
   const API = '/.netlify/functions/explore';
-  const WALLET = '0x71B78a8d2585C63F7D088e372A021E1166Bd4A58';
-  let qrGenerated = false;
   let currentSite = null;
 
   const loadingMsgs = [
@@ -451,37 +408,6 @@
   }
   function rateStar(n) { document.querySelectorAll('.star-btn').forEach((b,i)=>b.classList.toggle('active',i<n)); }
   function submitFeedback() { document.getElementById('feedbackThanks').style.display='block'; document.getElementById('submitBtn').style.display='none'; }
-
-  function selectAmount(el) { document.querySelectorAll('.donate-chip').forEach(c=>c.classList.remove('selected')); el.classList.add('selected'); }
-
-  function copyWallet() {
-    navigator.clipboard.writeText(WALLET).then(() => {
-      const btn = document.querySelector('.donate-copy-btn');
-      btn.textContent = 'Copied ✓';
-      setTimeout(() => btn.textContent = 'Copy', 2000);
-    });
-  }
-
-  function toggleQR() {
-    const wrap = document.getElementById('qrWrap');
-    const btn  = document.getElementById('qrToggleBtn');
-    const visible = wrap.style.display === 'block';
-    if (!visible) {
-      wrap.style.display = 'block';
-      btn.textContent = 'Hide QR Code';
-      if (!qrGenerated) {
-        new QRCode(document.getElementById('qrCanvas'), {
-          text: WALLET, width: 160, height: 160,
-          colorDark: '#2C2416', colorLight: '#F5EDD8',
-          correctLevel: QRCode.CorrectLevel.M
-        });
-        qrGenerated = true;
-      }
-    } else {
-      wrap.style.display = 'none';
-      btn.textContent = 'Show QR Code';
-    }
-  }
 
   function showLoading() {
     document.getElementById('formPanel').style.display   = 'none';
