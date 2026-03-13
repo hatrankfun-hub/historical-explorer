@@ -39,7 +39,7 @@ Respond ONLY with a raw JSON object — no markdown fences, no explanation. Use 
   "isUnesco": true,
   "unescoYear": "1979",
   "unescoCriteria": "One clear sentence on its outstanding universal value.",
-  "imageQuery": "short specific search query for this site e.g. Borobudur temple Indonesia or Pyramids Giza Egypt"
+  "wikipediaTitle": "The exact Wikipedia article title for this site e.g. Great Pyramid of Giza"
 }`;
 
     // Step 1: Get site data from Groq
@@ -80,27 +80,43 @@ Respond ONLY with a raw JSON object — no markdown fences, no explanation. Use 
     raw = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/, '').trim();
     const siteData = JSON.parse(raw);
 
-    // Step 2: Fetch image from Unsplash
+    // Step 2: Fetch image from Wikipedia API (no key needed)
     let imageUrl = '';
     try {
-      const query = encodeURIComponent(siteData.imageQuery || siteData.siteName);
-      const unsplashRes = await fetch(
-        `https://api.unsplash.com/search/photos?query=${query}&per_page=1&orientation=landscape`,
-        {
-          headers: {
-            'Authorization': `Client-ID ${process.env.UNSPLASH_ACCESS_KEY}`,
-          },
-        }
+      const title = encodeURIComponent(siteData.wikipediaTitle || siteData.siteName);
+      const wikiRes = await fetch(
+        `https://en.wikipedia.org/api/rest_v1/page/summary/${title}`
       );
-      if (unsplashRes.ok) {
-        const unsplashData = await unsplashRes.json();
-        imageUrl = unsplashData.results?.[0]?.urls?.regular || '';
+      if (wikiRes.ok) {
+        const wikiData = await wikiRes.json();
+        imageUrl = wikiData?.originalimage?.source || wikiData?.thumbnail?.source || '';
       }
     } catch (_) {
       imageUrl = '';
     }
 
-    delete siteData.imageQuery;
+    // Fallback: try Unsplash if available and Wikipedia had no image
+    if (!imageUrl && process.env.UNSPLASH_ACCESS_KEY) {
+      try {
+        const query = encodeURIComponent(siteData.siteName + ' ' + country);
+        const unsplashRes = await fetch(
+          `https://api.unsplash.com/search/photos?query=${query}&per_page=1&orientation=landscape`,
+          {
+            headers: {
+              'Authorization': `Client-ID ${process.env.UNSPLASH_ACCESS_KEY}`,
+            },
+          }
+        );
+        if (unsplashRes.ok) {
+          const unsplashData = await unsplashRes.json();
+          imageUrl = unsplashData.results?.[0]?.urls?.regular || '';
+        }
+      } catch (_) {
+        imageUrl = '';
+      }
+    }
+
+    delete siteData.wikipediaTitle;
     siteData.imageUrl = imageUrl;
 
     return {
