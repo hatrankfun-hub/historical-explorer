@@ -39,10 +39,11 @@ Respond ONLY with a raw JSON object — no markdown fences, no explanation. Use 
   "isUnesco": true,
   "unescoYear": "1979",
   "unescoCriteria": "One clear sentence on its outstanding universal value.",
-  "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/... (a real direct Wikimedia Commons .jpg URL)"
+  "imageQuery": "short specific search query for this site e.g. Borobudur temple Indonesia or Pyramids Giza Egypt"
 }`;
 
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    // Step 1: Get site data from Groq
+    const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -65,20 +66,42 @@ Respond ONLY with a raw JSON object — no markdown fences, no explanation. Use 
       }),
     });
 
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
+    if (!groqResponse.ok) {
+      const err = await groqResponse.json().catch(() => ({}));
       return {
-        statusCode: response.status,
+        statusCode: groqResponse.status,
         headers: { 'Access-Control-Allow-Origin': '*' },
         body: JSON.stringify({ error: err?.error?.message || 'Groq API error' }),
       };
     }
 
-    const data = await response.json();
-    let raw = data.choices?.[0]?.message?.content?.trim() || '';
+    const groqData = await groqResponse.json();
+    let raw = groqData.choices?.[0]?.message?.content?.trim() || '';
     raw = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/, '').trim();
+    const siteData = JSON.parse(raw);
 
-    const parsed = JSON.parse(raw);
+    // Step 2: Fetch image from Unsplash
+    let imageUrl = '';
+    try {
+      const query = encodeURIComponent(siteData.imageQuery || siteData.siteName);
+      const unsplashRes = await fetch(
+        `https://api.unsplash.com/search/photos?query=${query}&per_page=1&orientation=landscape`,
+        {
+          headers: {
+            'Authorization': `Client-ID ${process.env.UNSPLASH_ACCESS_KEY}`,
+          },
+        }
+      );
+      if (unsplashRes.ok) {
+        const unsplashData = await unsplashRes.json();
+        imageUrl = unsplashData.results?.[0]?.urls?.regular || '';
+      }
+    } catch (_) {
+      imageUrl = '';
+    }
+
+    delete siteData.imageQuery;
+    siteData.imageUrl = imageUrl;
 
     return {
       statusCode: 200,
@@ -86,7 +109,7 @@ Respond ONLY with a raw JSON object — no markdown fences, no explanation. Use 
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*',
       },
-      body: JSON.stringify(parsed),
+      body: JSON.stringify(siteData),
     };
 
   } catch (err) {
