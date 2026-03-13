@@ -42,17 +42,26 @@ Respond ONLY with a raw JSON object — no markdown fences, no explanation. Use 
   "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/... (a real direct Wikimedia Commons .jpg URL)"
 }`;
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
+        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'llama-3.3-70b-versatile',
         max_tokens: 900,
-        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.7,
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a historical sites expert. Always respond with valid raw JSON only, no markdown, no explanation.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
       }),
     });
 
@@ -61,13 +70,15 @@ Respond ONLY with a raw JSON object — no markdown fences, no explanation. Use 
       return {
         statusCode: response.status,
         headers: { 'Access-Control-Allow-Origin': '*' },
-        body: JSON.stringify({ error: err?.error?.message || 'Anthropic API error' }),
+        body: JSON.stringify({ error: err?.error?.message || 'Groq API error' }),
       };
     }
 
     const data = await response.json();
-    let raw = data.content?.[0]?.text?.trim() || '';
+    let raw = data.choices?.[0]?.message?.content?.trim() || '';
     raw = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/, '').trim();
+
+    const parsed = JSON.parse(raw);
 
     return {
       statusCode: 200,
@@ -75,8 +86,9 @@ Respond ONLY with a raw JSON object — no markdown fences, no explanation. Use 
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*',
       },
-      body: raw,
+      body: JSON.stringify(parsed),
     };
+
   } catch (err) {
     return {
       statusCode: 500,
